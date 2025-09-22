@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>每日待办管理器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>每日待办管理器</h1>
+        <p class="subtitle">
+          轻松记录、安排并跟踪每天需要完成的事项，保持高效节奏。
+        </p>
+      </div>
+      <div class="header-actions">
+        <button id="export-button" class="secondary">导出数据</button>
+        <label class="import-button" for="import-input">
+          <input id="import-input" type="file" accept="application/json" />导入数据
+        </label>
+      </div>
+    </header>
+
+    <section class="dashboard" aria-label="任务统计概览">
+      <article class="card">
+        <h2>今天要做</h2>
+        <p class="card-number" id="summary-today">0</p>
+        <p class="card-desc">今天截止的任务数量</p>
+      </article>
+      <article class="card">
+        <h2>待处理</h2>
+        <p class="card-number" id="summary-pending">0</p>
+        <p class="card-desc">所有未完成任务数量</p>
+      </article>
+      <article class="card">
+        <h2>已完成</h2>
+        <p class="card-number" id="summary-completed">0</p>
+        <p class="card-desc">累计完成任务数量</p>
+      </article>
+      <article class="card warning">
+        <h2>已逾期</h2>
+        <p class="card-number" id="summary-overdue">0</p>
+        <p class="card-desc">需要尽快处理的任务</p>
+      </article>
+    </section>
+
+    <main class="layout">
+      <section class="panel" aria-labelledby="task-form-title">
+        <header class="panel-header">
+          <h2 id="task-form-title">创建或更新任务</h2>
+          <p class="panel-desc">
+            填写任务信息，点击“保存任务”即可加入列表。支持输入多个标签，使用逗号分隔。
+          </p>
+        </header>
+        <form id="task-form" autocomplete="off">
+          <input type="hidden" id="task-id" />
+          <label class="field">
+            <span>任务标题</span>
+            <input id="task-title" type="text" required maxlength="80" placeholder="例如：完成日报、准备会议" />
+          </label>
+          <label class="field">
+            <span>详细说明</span>
+            <textarea id="task-description" rows="4" placeholder="补充任务细节、准备材料或链接"></textarea>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>截止日期</span>
+              <input id="task-date" type="date" required />
+            </label>
+            <label class="field">
+              <span>优先级</span>
+              <select id="task-priority">
+                <option value="low">低</option>
+                <option value="medium" selected>中</option>
+                <option value="high">高</option>
+              </select>
+            </label>
+          </div>
+          <label class="field">
+            <span>标签</span>
+            <input id="task-tags" type="text" placeholder="工作, 健身, 阅读" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary" id="save-task">保存任务</button>
+            <button type="button" id="reset-form" class="secondary">清空表单</button>
+          </div>
+        </form>
+        <div class="tips">
+          <h3>小提示</h3>
+          <ul>
+            <li>点击任务右上角的“⋮”可以快速延期、编辑或删除。</li>
+            <li>列表支持按照今日、逾期、已完成等条件过滤。</li>
+            <li>使用导入/导出功能可以备份或迁移数据。</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="task-list-title">
+        <header class="panel-header">
+          <div>
+            <h2 id="task-list-title">任务列表</h2>
+            <p class="panel-desc">根据不同视角筛选任务，高效推进每日计划。</p>
+          </div>
+          <div class="task-controls">
+            <div class="filters" role="tablist" aria-label="任务筛选">
+              <button class="filter-button active" data-filter="today" role="tab">今天</button>
+              <button class="filter-button" data-filter="upcoming" role="tab">将来</button>
+              <button class="filter-button" data-filter="overdue" role="tab">逾期</button>
+              <button class="filter-button" data-filter="completed" role="tab">已完成</button>
+              <button class="filter-button" data-filter="all" role="tab">全部</button>
+            </div>
+            <div class="search-group">
+              <input id="task-search" type="search" placeholder="搜索标题、标签或说明" />
+              <button type="button" id="clear-completed" class="secondary">清除已完成</button>
+            </div>
+          </div>
+        </header>
+        <ul id="task-list" class="task-list" aria-live="polite"></ul>
+        <p id="empty-state" class="empty-state">目前没有符合条件的任务，试着添加一个吧！</p>
+      </section>
+    </main>
+
+    <template id="task-item-template">
+      <li class="task-item">
+        <div class="task-main">
+          <label class="checkbox">
+            <input type="checkbox" class="task-toggle" />
+            <span class="checkmark" aria-hidden="true"></span>
+          </label>
+          <div class="task-content">
+            <div class="task-title-row">
+              <h3 class="task-title"></h3>
+              <span class="task-priority"></span>
+            </div>
+            <p class="task-description"></p>
+            <div class="task-meta"></div>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="icon-button task-menu" aria-label="更多操作">⋮</button>
+          <div class="task-menu-list" role="menu">
+            <button class="menu-item postpone" role="menuitem">延期一天</button>
+            <button class="menu-item edit" role="menuitem">编辑任务</button>
+            <button class="menu-item delete" role="menuitem">删除任务</button>
+          </div>
+        </div>
+      </li>
+    </template>
+
+    <dialog id="confirm-dialog">
+      <form method="dialog">
+        <p id="confirm-message">确认执行此操作吗？</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary">取消</button>
+          <button value="confirm" class="primary">确定</button>
+        </div>
+      </form>
+    </dialog>
+
+    <footer class="app-footer">
+      <p>
+        数据存储在浏览器本地，不会上传到服务器。导出文件为 JSON 格式，可在不同设备之间手动迁移。
+      </p>
+    </footer>
+
+    <script src="assets/script.js" type="module"></script>
+  </body>
+</html>
